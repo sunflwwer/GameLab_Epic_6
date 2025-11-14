@@ -317,18 +317,6 @@ public class Follower : MonoBehaviour
             );
             newPosition.z = transform.position.z;
             transform.position = newPosition;
-            
-            // 이동 방향으로 회전 (2D)
-            if (faceMovementDirection && velocity.sqrMagnitude > 0.01f)
-            {
-                float angle = Mathf.Atan2(velocity.y, velocity.x) * Mathf.Rad2Deg;
-                Quaternion targetRotation = Quaternion.Euler(0, 0, angle - 90f);
-                transform.rotation = Quaternion.Slerp(
-                    transform.rotation,
-                    targetRotation,
-                    rotationSpeed * Time.deltaTime
-                );
-            }
         }
         else if (currentDistance < followDistance - 0.5f)
         {
@@ -337,6 +325,59 @@ public class Follower : MonoBehaviour
             Vector3 newPosition = transform.position + awayDirection * Time.deltaTime * 2f;
             newPosition.z = transform.position.z;
             transform.position = newPosition;
+        }
+        
+        // 회전 처리 (적이 있으면 적을 향해, 없으면 이동 방향)
+        HandleRotation();
+    }
+    
+    void HandleRotation()
+    {
+        if (!faceMovementDirection) return;
+        
+        // 근처의 적 찾기
+        float detectionRange = 6f;
+        Collider2D[] nearbyColliders = Physics2D.OverlapCircleAll(transform.position, detectionRange);
+        
+        Enemy closestEnemy = null;
+        float closestDistance = float.MaxValue;
+        
+        foreach (Collider2D col in nearbyColliders)
+        {
+            Enemy enemy = col.GetComponent<Enemy>();
+            if (enemy != null)
+            {
+                float distance = Vector2.Distance(transform.position, col.transform.position);
+                if (distance < closestDistance)
+                {
+                    closestDistance = distance;
+                    closestEnemy = enemy;
+                }
+            }
+        }
+        
+        // 적이 있으면 적을 향해 회전
+        if (closestEnemy != null)
+        {
+            Vector2 directionToEnemy = (closestEnemy.transform.position - transform.position).normalized;
+            float angle = Mathf.Atan2(directionToEnemy.y, directionToEnemy.x) * Mathf.Rad2Deg;
+            Quaternion targetRotation = Quaternion.Euler(0, 0, angle - 90f);
+            transform.rotation = Quaternion.Slerp(
+                transform.rotation,
+                targetRotation,
+                rotationSpeed * Time.deltaTime
+            );
+        }
+        // 적이 없으면 이동 방향으로 회전
+        else if (velocity.sqrMagnitude > 0.01f)
+        {
+            float angle = Mathf.Atan2(velocity.y, velocity.x) * Mathf.Rad2Deg;
+            Quaternion targetRotation = Quaternion.Euler(0, 0, angle - 90f);
+            transform.rotation = Quaternion.Slerp(
+                transform.rotation,
+                targetRotation,
+                rotationSpeed * Time.deltaTime
+            );
         }
     }
     
